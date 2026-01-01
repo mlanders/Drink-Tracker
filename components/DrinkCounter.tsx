@@ -6,6 +6,7 @@ export default function DrinkCounter() {
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [hasTrackedZero, setHasTrackedZero] = useState(false);
 
   useEffect(() => {
     fetchDateCount();
@@ -19,6 +20,7 @@ export default function DrinkCounter() {
       if (res.ok) {
         const data = await res.json();
         setCount(data.count);
+        setHasTrackedZero(data.hasTracked && data.count === 0);
       }
     } catch (error) {
       console.error("Error fetching count:", error);
@@ -38,6 +40,7 @@ export default function DrinkCounter() {
 
       if (res.ok) {
         setCount((prev) => prev + 1);
+        setHasTrackedZero(false);
       } else {
         const error = await res.json();
         alert(error.error || "Failed to update count");
@@ -64,6 +67,27 @@ export default function DrinkCounter() {
       }
     } catch (error) {
       console.error("Error decrementing:", error);
+    }
+  };
+
+  const handleConfirmZero = async () => {
+    try {
+      const dateString = selectedDate.toISOString().split("T")[0];
+      const res = await fetch("/api/drinks/confirm-zero", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: dateString }),
+      });
+
+      if (res.ok) {
+        setHasTrackedZero(true);
+        await fetchDateCount();
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to confirm zero");
+      }
+    } catch (error) {
+      console.error("Error confirming zero:", error);
     }
   };
 
@@ -215,13 +239,22 @@ export default function DrinkCounter() {
       <div className="text-center py-8">
         <div className="counter-display mb-8 pulse-slow">{count}</div>
 
-        <p className="text-gray-600 mb-8">
-          {count === 0
-            ? "No drinks logged"
-            : `${count} drink${count !== 1 ? "s" : ""} logged`}
-        </p>
+        {hasTrackedZero && count === 0 ? (
+          <div className="mb-8 p-4 bg-green-50 border-2 border-green-200 rounded-xl">
+            <p className="text-green-800 font-semibold text-lg mb-1">
+              🎉 Zero drinks logged!
+            </p>
+            <p className="text-green-700 text-sm">Great job staying sober!</p>
+          </div>
+        ) : (
+          <p className="text-gray-600 mb-8">
+            {count === 0
+              ? "No drinks logged yet"
+              : `${count} drink${count !== 1 ? "s" : ""} logged`}
+          </p>
+        )}
 
-        <div className="flex gap-6 justify-center">
+        <div className="flex gap-6 justify-center mb-6">
           <button
             onClick={handleDecrement}
             disabled={count === 0}
@@ -238,6 +271,15 @@ export default function DrinkCounter() {
             +
           </button>
         </div>
+
+        {count === 0 && !hasTrackedZero && (
+          <button
+            onClick={handleConfirmZero}
+            className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all"
+          >
+            ✓ Confirm Zero Drinks (Sober Day!)
+          </button>
+        )}
       </div>
     </div>
   );

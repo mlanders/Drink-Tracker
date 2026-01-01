@@ -16,7 +16,7 @@ export async function GET() {
         userId: session.user.id,
       },
       orderBy: {
-        date: 'desc',
+        date: "desc",
       },
     });
 
@@ -24,20 +24,21 @@ export async function GET() {
       return NextResponse.json({
         currentStreak: 0,
         longestStreak: 0,
-        lastTrackedDate: null
+        lastTrackedDate: null,
       });
     }
 
     // Group entries by date and sum counts
     const dailyTotals = new Map<string, number>();
-    entries.forEach(entry => {
-      const dateKey = entry.date.toISOString().split('T')[0];
+    entries.forEach((entry) => {
+      const dateKey = entry.date.toISOString().split("T")[0];
       dailyTotals.set(dateKey, (dailyTotals.get(dateKey) || 0) + entry.count);
     });
 
-    // Get unique dates with entries (where total > 0)
+    // Get unique dates with entries (tracked days - includes zero confirmations)
+    // A day is tracked if it has any entries, regardless of count
     const trackedDates = Array.from(dailyTotals.entries())
-      .filter(([_, count]) => count > 0)
+      .filter(([date]) => dailyTotals.has(date)) // Keep all tracked dates, including zeros
       .map(([date]) => date)
       .sort()
       .reverse();
@@ -46,7 +47,7 @@ export async function GET() {
       return NextResponse.json({
         currentStreak: 0,
         longestStreak: 0,
-        lastTrackedDate: null
+        lastTrackedDate: null,
       });
     }
 
@@ -54,11 +55,11 @@ export async function GET() {
     let currentStreak = 0;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayString = today.toISOString().split('T')[0];
+    const todayString = today.toISOString().split("T")[0];
 
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayString = yesterday.toISOString().split('T')[0];
+    const yesterdayString = yesterday.toISOString().split("T")[0];
 
     // Check if we have data for today or yesterday
     let checkDate: Date;
@@ -78,7 +79,7 @@ export async function GET() {
       for (let i = 1; i < trackedDates.length; i++) {
         const prevDate = new Date(checkDate);
         prevDate.setDate(prevDate.getDate() - 1);
-        const prevDateString = prevDate.toISOString().split('T')[0];
+        const prevDateString = prevDate.toISOString().split("T")[0];
 
         if (trackedDates[i] === prevDateString) {
           currentStreak++;
@@ -96,7 +97,9 @@ export async function GET() {
     for (let i = 0; i < trackedDates.length - 1; i++) {
       const currentDate = new Date(trackedDates[i]);
       const nextDate = new Date(trackedDates[i + 1]);
-      const dayDiff = Math.floor((currentDate.getTime() - nextDate.getTime()) / (1000 * 60 * 60 * 24));
+      const dayDiff = Math.floor(
+        (currentDate.getTime() - nextDate.getTime()) / (1000 * 60 * 60 * 24),
+      );
 
       if (dayDiff === 1) {
         tempStreak++;

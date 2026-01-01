@@ -12,13 +12,14 @@ export const metadata: Metadata = {
     template: "%s | Drink Tracker",
   },
   description:
-    "Track your daily hydration with ease. Monitor your drinking habits and stay healthy.",
+    "Track your alcohol consumption. Monitor your drinking habits and celebrate sober days.",
   keywords: [
     "drink tracker",
-    "hydration",
-    "water tracker",
+    "alcohol tracker",
+    "sobriety",
     "health",
     "wellness",
+    "moderation",
   ],
   authors: [{ name: "Drink Tracker" }],
   creator: "Drink Tracker",
@@ -28,13 +29,13 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "/",
     title: "Drink Tracker",
-    description: "Track your daily hydration with ease",
+    description: "Track your alcohol consumption and celebrate sober days",
     siteName: "Drink Tracker",
   },
   twitter: {
     card: "summary",
     title: "Drink Tracker",
-    description: "Track your daily hydration with ease",
+    description: "Track your alcohol consumption and celebrate sober days",
   },
   icons: {
     icon: "/icon",

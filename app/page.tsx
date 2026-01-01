@@ -33,12 +33,12 @@ export default async function Home() {
         </h1>
 
         <p className="text-2xl mb-4 font-light drop-shadow-lg">
-          Track your daily hydration with ease
+          Track your alcohol consumption with ease
         </p>
 
         <p className="text-lg mb-12 text-white/80 max-w-2xl mx-auto">
-          Stay healthy and monitor your drinking habits. Simple, beautiful, and
-          effective tracking.
+          Monitor your drinking habits and celebrate sober days. Simple,
+          beautiful, and effective tracking.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">

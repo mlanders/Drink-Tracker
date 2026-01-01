@@ -55,13 +55,6 @@ export default async function DashboardPage() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-8 fade-in">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h2>
-          <p className="text-gray-600">
-            Track your daily hydration and view your progress
-          </p>
-        </div>
-
         <div className="grid gap-6 lg:grid-cols-3 mb-6">
           <div className="lg:col-span-2">
             <DrinkCounter />

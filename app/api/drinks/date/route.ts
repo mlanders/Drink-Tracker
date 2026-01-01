@@ -14,7 +14,10 @@ export async function GET(request: Request) {
     const dateString = searchParams.get("date");
 
     if (!dateString) {
-      return NextResponse.json({ error: "Date parameter required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Date parameter required" },
+        { status: 400 },
+      );
     }
 
     const targetDate = new Date(dateString);
@@ -28,8 +31,12 @@ export async function GET(request: Request) {
     });
 
     const totalCount = entries.reduce((sum, entry) => sum + entry.count, 0);
+    const hasTracked = entries.length > 0; // Day is tracked if there are any entries (including zero confirmations)
 
-    return NextResponse.json({ count: Math.max(0, totalCount) });
+    return NextResponse.json({
+      count: Math.max(0, totalCount),
+      hasTracked,
+    });
   } catch (error) {
     console.error("Error fetching date count:", error);
     return NextResponse.json(
