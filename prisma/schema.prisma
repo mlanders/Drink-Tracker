@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  drinkEntries     DrinkEntry[]
+  monthlySummaries MonthlySummary[]
+
+  @@map("users")
+}
+
+model DrinkEntry {
+  id        String   @id @default(uuid())
+  userId    String
+  count     Int
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@map("drink_entries")
+}
+
+model MonthlySummary {
+  id            String   @id @default(uuid())
+  userId        String
+  year          Int
+  month         Int
+  totalDrinks   Int
+  averagePerDay Decimal  @db.Decimal(10, 2)
+  daysTracked   Int
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year, month])
+  @@map("monthly_summaries")
+}
