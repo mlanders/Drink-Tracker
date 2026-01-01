@@ -13,12 +13,12 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen">
       <nav className="bg-white/80 backdrop-blur-lg shadow-lg border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
+          <div className="flex justify-between items-center gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+              <div className="p-1.5 sm:p-2 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg">
                 <svg
-                  className="w-6 h-6 text-white"
+                  className="w-5 h-5 sm:w-6 sm:h-6 text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -31,16 +31,18 @@ export default async function DashboardPage() {
                   />
                 </svg>
               </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                 Drink Tracker
               </h1>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-sm text-gray-600">{session.user?.email}</div>
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="hidden sm:block text-sm text-gray-600 truncate max-w-[150px] lg:max-w-none">
+                {session.user?.email}
+              </div>
               <form action="/api/auth/signout" method="POST">
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-red-600 transition-colors"
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 hover:text-red-600 transition-colors whitespace-nowrap"
                 >
                   Sign Out
                 </button>
