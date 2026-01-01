@@ -5,14 +5,17 @@ import { useState, useEffect } from "react";
 export default function DrinkCounter() {
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   useEffect(() => {
-    fetchTodayCount();
-  }, []);
+    fetchDateCount();
+  }, [selectedDate]);
 
-  const fetchTodayCount = async () => {
+  const fetchDateCount = async () => {
     try {
-      const res = await fetch("/api/drinks/today");
+      setLoading(true);
+      const dateString = selectedDate.toISOString().split("T")[0];
+      const res = await fetch(`/api/drinks/date?date=${dateString}`);
       if (res.ok) {
         const data = await res.json();
         setCount(data.count);
@@ -26,14 +29,18 @@ export default function DrinkCounter() {
 
   const handleIncrement = async () => {
     try {
+      const dateString = selectedDate.toISOString().split("T")[0];
       const res = await fetch("/api/drinks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ count: 1 }),
+        body: JSON.stringify({ count: 1, date: dateString }),
       });
 
       if (res.ok) {
         setCount((prev) => prev + 1);
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to update count");
       }
     } catch (error) {
       console.error("Error incrementing:", error);
@@ -42,18 +49,71 @@ export default function DrinkCounter() {
 
   const handleDecrement = async () => {
     try {
+      const dateString = selectedDate.toISOString().split("T")[0];
       const res = await fetch("/api/drinks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ count: -1 }),
+        body: JSON.stringify({ count: -1, date: dateString }),
       });
 
       if (res.ok) {
         setCount((prev) => Math.max(0, prev - 1));
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to update count");
       }
     } catch (error) {
       console.error("Error decrementing:", error);
     }
+  };
+
+  const goToPreviousDay = () => {
+    const prev = new Date(selectedDate);
+    prev.setDate(prev.getDate() - 1);
+    setSelectedDate(prev);
+  };
+
+  const goToNextDay = () => {
+    const next = new Date(selectedDate);
+    next.setDate(next.getDate() + 1);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (next <= today) {
+      setSelectedDate(next);
+    }
+  };
+
+  const goToToday = () => {
+    setSelectedDate(new Date());
+  };
+
+  const isToday = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selected = new Date(selectedDate);
+    selected.setHours(0, 0, 0, 0);
+    return selected.getTime() === today.getTime();
+  };
+
+  const formatDate = () => {
+    if (isToday()) return "Today";
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    const selected = new Date(selectedDate);
+    selected.setHours(0, 0, 0, 0);
+    if (selected.getTime() === yesterday.getTime()) return "Yesterday";
+
+    return selectedDate.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year:
+        selectedDate.getFullYear() !== new Date().getFullYear()
+          ? "numeric"
+          : undefined,
+    });
   };
 
   if (loading) {
@@ -73,10 +133,36 @@ export default function DrinkCounter() {
 
   return (
     <div className="card p-8 fade-in">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-blue-100 rounded-lg">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <svg
+              className="w-5 h-5 text-blue-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900">Drink Count</h2>
+        </div>
+      </div>
+
+      {/* Date Navigation */}
+      <div className="flex items-center justify-between mb-6 bg-gray-50 rounded-lg p-3">
+        <button
+          onClick={goToPreviousDay}
+          className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+          aria-label="Previous day"
+        >
           <svg
-            className="w-5 h-5 text-blue-600"
+            className="w-5 h-5 text-gray-600"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -85,11 +171,45 @@ export default function DrinkCounter() {
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={2}
-              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              d="M15 19l-7-7 7-7"
             />
           </svg>
+        </button>
+
+        <div className="flex items-center gap-2">
+          <span className="text-lg font-semibold text-gray-900">
+            {formatDate()}
+          </span>
+          {!isToday() && (
+            <button
+              onClick={goToToday}
+              className="ml-2 px-3 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            >
+              Go to Today
+            </button>
+          )}
         </div>
-        <h2 className="text-2xl font-bold text-gray-900">Today's Count</h2>
+
+        <button
+          onClick={goToNextDay}
+          disabled={isToday()}
+          className="p-2 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+          aria-label="Next day"
+        >
+          <svg
+            className="w-5 h-5 text-gray-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </button>
       </div>
 
       <div className="text-center py-8">
@@ -97,8 +217,8 @@ export default function DrinkCounter() {
 
         <p className="text-gray-600 mb-8">
           {count === 0
-            ? "Start tracking your drinks!"
-            : `Great job! ${count} drinks today`}
+            ? "No drinks logged"
+            : `${count} drink${count !== 1 ? "s" : ""} logged`}
         </p>
 
         <div className="flex gap-6 justify-center">

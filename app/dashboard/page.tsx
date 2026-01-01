@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import DrinkCounter from "@/components/DrinkCounter";
 import MonthlySummary from "@/components/MonthlySummary";
+import StreakTracker from "@/components/StreakTracker";
+import CalendarView from "@/components/CalendarView";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -60,8 +62,17 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-2">
-          <DrinkCounter />
+        <div className="grid gap-6 lg:grid-cols-3 mb-6">
+          <div className="lg:col-span-2">
+            <DrinkCounter />
+          </div>
+          <div>
+            <StreakTracker />
+          </div>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2 mb-6">
+          <CalendarView />
           <MonthlySummary />
         </div>
       </main>
