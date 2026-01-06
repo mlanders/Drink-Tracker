@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseDateString } from "@/lib/dateUtils";
 
 export async function GET(request: Request) {
   try {
@@ -20,8 +21,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const targetDate = new Date(dateString);
-    targetDate.setHours(0, 0, 0, 0);
+    const targetDate = parseDateString(dateString);
 
     const entries = await prisma.drinkEntry.findMany({
       where: {

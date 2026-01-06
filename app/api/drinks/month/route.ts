@@ -15,11 +15,15 @@ export async function GET(request: Request) {
     const month = parseInt(searchParams.get("month") || "");
 
     if (!year || !month || month < 1 || month > 12) {
-      return NextResponse.json({ error: "Invalid year or month" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid year or month" },
+        { status: 400 },
+      );
     }
 
-    const firstDay = new Date(year, month - 1, 1);
-    const lastDay = new Date(year, month, 0);
+    // Create dates in UTC to avoid timezone issues
+    const firstDay = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+    const lastDay = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
 
     const entries = await prisma.drinkEntry.findMany({
       where: {
@@ -30,14 +34,14 @@ export async function GET(request: Request) {
         },
       },
       orderBy: {
-        date: 'asc',
+        date: "asc",
       },
     });
 
     // Group by date and sum counts
     const dailyTotals = new Map<string, number>();
-    entries.forEach(entry => {
-      const dateKey = entry.date.toISOString().split('T')[0];
+    entries.forEach((entry) => {
+      const dateKey = entry.date.toISOString().split("T")[0];
       dailyTotals.set(dateKey, (dailyTotals.get(dateKey) || 0) + entry.count);
     });
 

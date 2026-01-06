@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseDateString, getTodayUTC, getDaysAgoUTC } from "@/lib/dateUtils";
 
 export async function POST(request: Request) {
   try {
@@ -12,13 +13,11 @@ export async function POST(request: Request) {
 
     const { date: dateString } = await request.json();
 
-    // Use provided date or default to today
-    const targetDate = dateString ? new Date(dateString) : new Date();
-    targetDate.setHours(0, 0, 0, 0);
+    // Use provided date or default to today (always in UTC)
+    const targetDate = dateString ? parseDateString(dateString) : getTodayUTC();
 
     // Prevent future dates
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
+    const now = getTodayUTC();
     if (targetDate > now) {
       return NextResponse.json(
         { error: "Cannot confirm zero for future dates" },
@@ -27,9 +26,7 @@ export async function POST(request: Request) {
     }
 
     // Limit backfill to 90 days
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-    ninetyDaysAgo.setHours(0, 0, 0, 0);
+    const ninetyDaysAgo = getDaysAgoUTC(90);
     if (targetDate < ninetyDaysAgo) {
       return NextResponse.json(
         { error: "Cannot confirm zero more than 90 days in the past" },
@@ -45,7 +42,10 @@ export async function POST(request: Request) {
       },
     });
 
-    const totalCount = existingEntries.reduce((sum, entry) => sum + entry.count, 0);
+    const totalCount = existingEntries.reduce(
+      (sum, entry) => sum + entry.count,
+      0,
+    );
 
     if (totalCount > 0) {
       return NextResponse.json(
