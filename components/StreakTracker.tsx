@@ -10,7 +10,11 @@ interface StreakData {
   lastTrackedDate: string | null;
 }
 
-export default function StreakTracker() {
+interface StreakTrackerProps {
+  timezone: string;
+}
+
+export default function StreakTracker({ timezone }: StreakTrackerProps) {
   const [streak, setStreak] = useState<StreakData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -20,7 +24,9 @@ export default function StreakTracker() {
 
   const fetchStreak = async () => {
     try {
-      const res = await fetch("/api/drinks/streak");
+      const res = await fetch(
+        `/api/drinks/streak?timezone=${encodeURIComponent(timezone)}`,
+      );
       if (res.ok) {
         const data = await res.json();
         setStreak(data);

@@ -1,29 +1,20 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import DrinkCounter from "@/components/DrinkCounter";
-import MonthlySummary from "@/components/MonthlySummary";
-import StreakTracker from "@/components/StreakTracker";
-import CalendarView from "@/components/CalendarView";
+import ProfileForm from "@/components/ProfileForm";
 
-export default async function DashboardPage() {
+export default async function ProfilePage() {
   const session = await auth();
 
   if (!session) {
     redirect("/login");
   }
 
-  // Get timezone with fallback
-  const timezone = (session.user as any).timezone || "America/Los_Angeles";
-
   return (
     <div className="min-h-screen">
       <nav className="bg-white/80 backdrop-blur-lg shadow-lg border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex justify-between items-center gap-2">
-            <a
-              href="/"
-              className="flex items-center gap-2 sm:gap-3 flex-shrink-0 hover:opacity-80 transition-opacity"
-            >
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <div className="p-1.5 sm:p-2 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg">
                 <svg
                   className="w-5 h-5 sm:w-6 sm:h-6 text-white"
@@ -42,16 +33,13 @@ export default async function DashboardPage() {
               <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                 Drink Tracker
               </h1>
-            </a>
+            </div>
             <div className="flex items-center gap-2 sm:gap-4">
-              <div className="hidden sm:block text-sm text-gray-600 truncate max-w-[150px] lg:max-w-none">
-                {session.user?.email}
-              </div>
               <a
-                href="/profile"
+                href="/dashboard"
                 className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors whitespace-nowrap"
               >
-                Profile
+                Dashboard
               </a>
               <form action="/api/auth/signout" method="POST">
                 <button
@@ -66,20 +54,15 @@ export default async function DashboardPage() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid gap-6 lg:grid-cols-3 mb-6">
-          <div className="lg:col-span-2">
-            <DrinkCounter timezone={timezone} />
-          </div>
-          <div>
-            <StreakTracker timezone={timezone} />
-          </div>
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="mb-8 fade-in">
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Profile Settings</h2>
+          <p className="text-gray-600">
+            Manage your account settings and preferences
+          </p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2 mb-6">
-          <CalendarView timezone={timezone} />
-          <MonthlySummary timezone={timezone} />
-        </div>
+        <ProfileForm />
       </main>
     </div>
   );

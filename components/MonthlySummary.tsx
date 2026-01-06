@@ -10,7 +10,11 @@ interface Summary {
   daysTracked: number;
 }
 
-export default function MonthlySummary() {
+interface MonthlySummaryProps {
+  timezone: string;
+}
+
+export default function MonthlySummary({ timezone }: MonthlySummaryProps) {
   const [summaries, setSummaries] = useState<Summary[]>([]);
   const [loading, setLoading] = useState(true);
 

@@ -1,13 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { formatDateInTimezone, getTodayInTimezone } from "@/lib/dateUtils";
 
 interface DayData {
   date: string;
   count: number;
 }
 
-export default function CalendarView() {
+interface CalendarViewProps {
+  timezone: string;
+}
+
+export default function CalendarView({ timezone }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [monthData, setMonthData] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -92,11 +97,11 @@ export default function CalendarView() {
   };
 
   const getCountForDate = (date: Date): number => {
-    // Format date as YYYY-MM-DD in local timezone to match API response
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const dateString = `${year}-${month}-${day}`;
+    // Convert the local date to a UTC date for lookup
+    const utcDate = new Date(
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+    );
+    const dateString = formatDateInTimezone(utcDate, timezone);
     return monthData.get(dateString) || 0;
   };
 
@@ -110,20 +115,19 @@ export default function CalendarView() {
   };
 
   const isToday = (date: Date): boolean => {
-    const today = new Date();
-    return (
-      date.getDate() === today.getDate() &&
-      date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear()
+    const today = getTodayInTimezone(timezone);
+    const utcDate = new Date(
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
     );
+    return utcDate.getTime() === today.getTime();
   };
 
   const isFutureDate = (date: Date): boolean => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const checkDate = new Date(date);
-    checkDate.setHours(0, 0, 0, 0);
-    return checkDate > today;
+    const today = getTodayInTimezone(timezone);
+    const utcDate = new Date(
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+    );
+    return utcDate > today;
   };
 
   const days = getDaysInMonth();

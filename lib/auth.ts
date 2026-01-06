@@ -36,6 +36,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           id: user.id,
           email: user.email,
           name: user.name,
+          timezone: user.timezone,
         };
       },
     }),
@@ -47,15 +48,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: "/login",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
+        token.timezone = user.timezone;
+      }
+      // Fetch fresh user data when profile is updated
+      if (trigger === "update" && token.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { timezone: true },
+        });
+        if (dbUser) {
+          token.timezone = dbUser.timezone;
+        }
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
+        session.user.timezone =
+          (token.timezone as string) || "America/Los_Angeles";
       }
       return session;
     },

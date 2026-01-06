@@ -1,11 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { formatDateInTimezone, getTodayInTimezone } from "@/lib/dateUtils";
 
-export default function DrinkCounter() {
+interface DrinkCounterProps {
+  timezone: string;
+}
+
+export default function DrinkCounter({ timezone }: DrinkCounterProps) {
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(() =>
+    getTodayInTimezone(timezone),
+  );
   const [hasTrackedZero, setHasTrackedZero] = useState(false);
 
   useEffect(() => {
@@ -15,7 +22,8 @@ export default function DrinkCounter() {
   const fetchDateCount = async () => {
     try {
       setLoading(true);
-      const dateString = selectedDate.toISOString().split("T")[0];
+      // Format date as YYYY-MM-DD (stored as UTC in DB)
+      const dateString = formatDateInTimezone(selectedDate, timezone);
       const res = await fetch(`/api/drinks/date?date=${dateString}`);
       if (res.ok) {
         const data = await res.json();
@@ -31,7 +39,7 @@ export default function DrinkCounter() {
 
   const handleIncrement = async () => {
     try {
-      const dateString = selectedDate.toISOString().split("T")[0];
+      const dateString = formatDateInTimezone(selectedDate, timezone);
       const res = await fetch("/api/drinks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -52,7 +60,7 @@ export default function DrinkCounter() {
 
   const handleDecrement = async () => {
     try {
-      const dateString = selectedDate.toISOString().split("T")[0];
+      const dateString = formatDateInTimezone(selectedDate, timezone);
       const res = await fetch("/api/drinks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -72,7 +80,7 @@ export default function DrinkCounter() {
 
   const handleConfirmZero = async () => {
     try {
-      const dateString = selectedDate.toISOString().split("T")[0];
+      const dateString = formatDateInTimezone(selectedDate, timezone);
       const res = await fetch("/api/drinks/confirm-zero", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -99,45 +107,60 @@ export default function DrinkCounter() {
 
   const goToNextDay = () => {
     const next = new Date(selectedDate);
-    next.setDate(next.getDate() + 1);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    next.setUTCDate(next.getUTCDate() + 1);
+    const today = getTodayInTimezone(timezone);
     if (next <= today) {
       setSelectedDate(next);
     }
   };
 
   const goToToday = () => {
-    setSelectedDate(new Date());
+    setSelectedDate(getTodayInTimezone(timezone));
   };
 
   const isToday = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const selected = new Date(selectedDate);
-    selected.setHours(0, 0, 0, 0);
-    return selected.getTime() === today.getTime();
+    const today = getTodayInTimezone(timezone);
+    return selectedDate.getTime() === today.getTime();
   };
 
   const formatDate = () => {
-    if (isToday()) return "Today";
+    // Extract UTC date parts directly (since selectedDate represents a calendar day)
+    const year = selectedDate.getUTCFullYear();
+    const month = selectedDate.getUTCMonth();
+    const day = selectedDate.getUTCDate();
 
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(0, 0, 0, 0);
-    const selected = new Date(selectedDate);
-    selected.setHours(0, 0, 0, 0);
-    if (selected.getTime() === yesterday.getTime()) return "Yesterday";
+    // Create a formatter without timezone conversion
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year:
+        year !== getTodayInTimezone(timezone).getUTCFullYear()
+          ? "numeric"
+          : undefined,
+    });
 
-    return selectedDate.toLocaleDateString("en-US", {
+    // Format using a date constructed from the UTC parts in local time
+    const displayDate = new Date(year, month, day);
+    const dateStr = formatter.format(displayDate);
+
+    if (isToday()) return `Today (${dateStr})`;
+
+    const yesterday = new Date(getTodayInTimezone(timezone));
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    if (selectedDate.getTime() === yesterday.getTime())
+      return `Yesterday (${dateStr})`;
+
+    // For other dates, include weekday
+    const formatterWithWeekday = new Intl.DateTimeFormat("en-US", {
       weekday: "short",
       month: "short",
       day: "numeric",
       year:
-        selectedDate.getFullYear() !== new Date().getFullYear()
+        year !== getTodayInTimezone(timezone).getUTCFullYear()
           ? "numeric"
           : undefined,
     });
+    return formatterWithWeekday.format(displayDate);
   };
 
   if (loading) {
