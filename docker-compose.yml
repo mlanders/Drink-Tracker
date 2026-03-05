@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: drink_tracker
+      POSTGRES_PASSWORD: drink_tracker_password
+      POSTGRES_DB: drink_tracker
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U drink_tracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    build:
+      context: .
+      target: builder
+    command: npx prisma db push
+    environment:
+      DATABASE_URL: postgresql://drink_tracker:drink_tracker_password@db:5432/drink_tracker
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: on-failure
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://drink_tracker:drink_tracker_password@db:5432/drink_tracker
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: HLBfEvrxyglB9FhveARg786aYuj7wuB7lDHSaCFZB8Y=
+      CRON_SECRET: UtaBQctyAeSt05zFke+iGdHamOqZSa6LVJjLjNTnAEc=
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:
