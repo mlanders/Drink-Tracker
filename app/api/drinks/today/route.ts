@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getDB, type DBDrinkEntry } from "@/lib/db";
 import { getTodayInTimezone } from "@/lib/dateUtils";
 
 export async function GET(request: Request) {
@@ -11,24 +11,24 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get timezone from query param or use session timezone or default
     const { searchParams } = new URL(request.url);
     const timezone =
       searchParams.get("timezone") ||
       (session.user as any).timezone ||
       "America/Los_Angeles";
 
-    // Calculate today in the user's timezone
     const today = getTodayInTimezone(timezone);
+    const todayStr = today.toISOString().split("T")[0];
 
-    const entries = await prisma.drinkEntry.findMany({
-      where: {
-        userId: session.user.id,
-        date: today,
-      },
-    });
+    const db = getDB();
+    const { results } = await db
+      .prepare(
+        "SELECT * FROM drink_entries WHERE user_id = ? AND date = ?",
+      )
+      .bind(session.user.id, todayStr)
+      .all<DBDrinkEntry>();
 
-    const totalCount = entries.reduce((sum, entry) => sum + entry.count, 0);
+    const totalCount = results.reduce((sum, entry) => sum + entry.count, 0);
 
     return NextResponse.json({ count: Math.max(0, totalCount) });
   } catch (error) {

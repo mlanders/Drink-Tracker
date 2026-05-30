@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getDB, type DBDrinkEntry } from "@/lib/db";
 import { parseDateString } from "@/lib/dateUtils";
 
 export async function GET(request: Request) {
@@ -22,16 +22,18 @@ export async function GET(request: Request) {
     }
 
     const targetDate = parseDateString(dateString);
+    const dateStr = targetDate.toISOString().split("T")[0];
 
-    const entries = await prisma.drinkEntry.findMany({
-      where: {
-        userId: session.user.id,
-        date: targetDate,
-      },
-    });
+    const db = getDB();
+    const { results: entries } = await db
+      .prepare(
+        "SELECT * FROM drink_entries WHERE user_id = ? AND date = ?",
+      )
+      .bind(session.user.id, dateStr)
+      .all<DBDrinkEntry>();
 
     const totalCount = entries.reduce((sum, entry) => sum + entry.count, 0);
-    const hasTracked = entries.length > 0; // Day is tracked if there are any entries (including zero confirmations)
+    const hasTracked = entries.length > 0;
 
     return NextResponse.json({
       count: Math.max(0, totalCount),

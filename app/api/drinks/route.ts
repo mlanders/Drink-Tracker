@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getDB } from "@/lib/db";
 import { parseDateString, getTodayUTC, getDaysAgoUTC } from "@/lib/dateUtils";
 
 export async function POST(request: Request) {
@@ -20,11 +20,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Use provided date or default to today (always in UTC)
     const targetDate = dateString ? parseDateString(dateString) : getTodayUTC();
-
-    // Prevent future dates
     const now = getTodayUTC();
+
     if (targetDate > now) {
       return NextResponse.json(
         { error: "Cannot log drinks for future dates" },
@@ -32,7 +30,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Limit backfill to 90 days
     const ninetyDaysAgo = getDaysAgoUTC(90);
     if (targetDate < ninetyDaysAgo) {
       return NextResponse.json(
@@ -41,15 +38,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const entry = await prisma.drinkEntry.create({
-      data: {
-        userId: session.user.id,
-        count,
-        date: targetDate,
-      },
-    });
+    const db = getDB();
+    const id = crypto.randomUUID();
+    const dateStr = targetDate.toISOString().split("T")[0];
 
-    return NextResponse.json({ success: true, entry });
+    await db
+      .prepare(
+        "INSERT INTO drink_entries (id, user_id, count, date) VALUES (?, ?, ?, ?)",
+      )
+      .bind(id, session.user.id, count, dateStr)
+      .run();
+
+    return NextResponse.json({
+      success: true,
+      entry: { id, userId: session.user.id, count, date: dateStr },
+    });
   } catch (error) {
     console.error("Error creating drink entry:", error);
     return NextResponse.json(

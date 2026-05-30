@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getDB, type DBDrinkEntry } from "@/lib/db";
 
 export async function GET(request: Request) {
   try {
@@ -21,28 +21,24 @@ export async function GET(request: Request) {
       );
     }
 
-    // Create dates in UTC to avoid timezone issues
-    const firstDay = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
-    const lastDay = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+    const firstDay = `${year}-${String(month).padStart(2, "0")}-01`;
+    const lastDayDate = new Date(Date.UTC(year, month, 0));
+    const lastDay = lastDayDate.toISOString().split("T")[0];
 
-    const entries = await prisma.drinkEntry.findMany({
-      where: {
-        userId: session.user.id,
-        date: {
-          gte: firstDay,
-          lte: lastDay,
-        },
-      },
-      orderBy: {
-        date: "asc",
-      },
-    });
+    const db = getDB();
+    const { results: entries } = await db
+      .prepare(
+        "SELECT * FROM drink_entries WHERE user_id = ? AND date >= ? AND date <= ? ORDER BY date ASC",
+      )
+      .bind(session.user.id, firstDay, lastDay)
+      .all<DBDrinkEntry>();
 
-    // Group by date and sum counts
     const dailyTotals = new Map<string, number>();
     entries.forEach((entry) => {
-      const dateKey = entry.date.toISOString().split("T")[0];
-      dailyTotals.set(dateKey, (dailyTotals.get(dateKey) || 0) + entry.count);
+      dailyTotals.set(
+        entry.date,
+        (dailyTotals.get(entry.date) || 0) + entry.count,
+      );
     });
 
     const days = Array.from(dailyTotals.entries()).map(([date, count]) => ({

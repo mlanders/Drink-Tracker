@@ -1,9 +1,10 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
-import { prisma } from "./prisma";
+import { getDB, type DBUser } from "./db";
+import { verifyPassword } from "./password";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  trustHost: true,
   providers: [
     Credentials({
       credentials: {
@@ -15,15 +16,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new Error("Invalid credentials");
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
-        });
+        const db = getDB();
+        const user = await db
+          .prepare("SELECT * FROM users WHERE email = ?")
+          .bind(credentials.email)
+          .first<DBUser>();
 
         if (!user || !user.password) {
           throw new Error("Invalid credentials");
         }
 
-        const isCorrectPassword = await bcrypt.compare(
+        const isCorrectPassword = await verifyPassword(
           credentials.password as string,
           user.password,
         );
@@ -51,14 +54,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
-        token.timezone = user.timezone;
+        token.timezone = (user as any).timezone;
       }
-      // Fetch fresh user data when profile is updated
       if (trigger === "update" && token.id) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { timezone: true },
-        });
+        const db = getDB();
+        const dbUser = await db
+          .prepare("SELECT timezone FROM users WHERE id = ?")
+          .bind(token.id)
+          .first<{ timezone: string }>();
         if (dbUser) {
           token.timezone = dbUser.timezone;
         }

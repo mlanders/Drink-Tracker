@@ -1,0 +1,18 @@
+{
+  "name": "drink-tracker",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-05-30",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "drink-tracker",
+      "database_id": "67975c73-35a0-4a4f-9c42-155f3b9c9632",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

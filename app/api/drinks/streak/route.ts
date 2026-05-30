@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getDB, type DBDrinkEntry } from "@/lib/db";
 import { getTodayInTimezone } from "@/lib/dateUtils";
 
 export async function GET(request: Request) {
@@ -11,22 +11,19 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get timezone from query param or use session timezone or default
     const { searchParams } = new URL(request.url);
     const timezone =
       searchParams.get("timezone") ||
       (session.user as any).timezone ||
       "America/Los_Angeles";
 
-    // Get all drink entries for the user, ordered by date descending
-    const entries = await prisma.drinkEntry.findMany({
-      where: {
-        userId: session.user.id,
-      },
-      orderBy: {
-        date: "desc",
-      },
-    });
+    const db = getDB();
+    const { results: entries } = await db
+      .prepare(
+        "SELECT * FROM drink_entries WHERE user_id = ? ORDER BY date DESC",
+      )
+      .bind(session.user.id)
+      .all<DBDrinkEntry>();
 
     if (entries.length === 0) {
       return NextResponse.json({
@@ -41,11 +38,12 @@ export async function GET(request: Request) {
     // Group entries by date and sum counts
     const dailyTotals = new Map<string, number>();
     entries.forEach((entry) => {
-      const dateKey = entry.date.toISOString().split("T")[0];
-      dailyTotals.set(dateKey, (dailyTotals.get(dateKey) || 0) + entry.count);
+      dailyTotals.set(
+        entry.date,
+        (dailyTotals.get(entry.date) || 0) + entry.count,
+      );
     });
 
-    // Get unique dates with entries (tracked days - includes zero confirmations)
     const trackedDates = Array.from(dailyTotals.keys()).sort().reverse();
 
     if (trackedDates.length === 0) {
@@ -58,7 +56,6 @@ export async function GET(request: Request) {
       });
     }
 
-    // Calculate today in the user's timezone
     const today = getTodayInTimezone(timezone);
     const todayString = today.toISOString().split("T")[0];
 
@@ -66,7 +63,6 @@ export async function GET(request: Request) {
     yesterday.setUTCDate(yesterday.getUTCDate() - 1);
     const yesterdayString = yesterday.toISOString().split("T")[0];
 
-    // Calculate current TRACKING streak (any day with data)
     let currentTrackingStreak = 0;
     let checkDate: Date;
 
@@ -77,10 +73,9 @@ export async function GET(request: Request) {
       checkDate = yesterday;
       currentTrackingStreak = 1;
     } else {
-      checkDate = new Date(0); // Streak is broken
+      checkDate = new Date(0);
     }
 
-    // Count consecutive tracked days backwards
     if (currentTrackingStreak > 0) {
       for (let i = 1; i < trackedDates.length; i++) {
         const prevDate = new Date(checkDate);
@@ -96,7 +91,6 @@ export async function GET(request: Request) {
       }
     }
 
-    // Calculate longest TRACKING streak
     let longestTrackingStreak = 0;
     let tempStreak = 1;
 
@@ -116,7 +110,6 @@ export async function GET(request: Request) {
     }
     longestTrackingStreak = Math.max(longestTrackingStreak, tempStreak);
 
-    // Calculate SOBER streaks (only days with 0 drinks)
     const soberDates = trackedDates.filter(
       (date) => dailyTotals.get(date) === 0,
     );
@@ -135,7 +128,6 @@ export async function GET(request: Request) {
         checkSoberDate = new Date(0);
       }
 
-      // Count consecutive sober days backwards
       if (currentSoberStreak > 0) {
         for (let i = 1; i < soberDates.length; i++) {
           const prevDate = new Date(checkSoberDate);
@@ -152,7 +144,6 @@ export async function GET(request: Request) {
       }
     }
 
-    // Calculate longest SOBER streak
     let longestSoberStreak = 0;
     let tempSoberStreak = 1;
 

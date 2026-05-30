@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getDB, type DBMonthlySummary } from "@/lib/db";
 
 export async function GET() {
   try {
@@ -10,13 +10,13 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const summaries = await prisma.monthlySummary.findMany({
-      where: {
-        userId: session.user.id,
-      },
-      orderBy: [{ year: "desc" }, { month: "desc" }],
-      take: 12,
-    });
+    const db = getDB();
+    const { results: summaries } = await db
+      .prepare(
+        "SELECT * FROM monthly_summaries WHERE user_id = ? ORDER BY year DESC, month DESC LIMIT 12",
+      )
+      .bind(session.user.id)
+      .all<DBMonthlySummary>();
 
     return NextResponse.json({ summaries });
   } catch (error) {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getDB, type DBDrinkEntry } from "@/lib/db";
 import { parseDateString, getTodayUTC, getDaysAgoUTC } from "@/lib/dateUtils";
 
 export async function POST(request: Request) {
@@ -13,11 +13,9 @@ export async function POST(request: Request) {
 
     const { date: dateString } = await request.json();
 
-    // Use provided date or default to today (always in UTC)
     const targetDate = dateString ? parseDateString(dateString) : getTodayUTC();
-
-    // Prevent future dates
     const now = getTodayUTC();
+
     if (targetDate > now) {
       return NextResponse.json(
         { error: "Cannot confirm zero for future dates" },
@@ -25,7 +23,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Limit backfill to 90 days
     const ninetyDaysAgo = getDaysAgoUTC(90);
     if (targetDate < ninetyDaysAgo) {
       return NextResponse.json(
@@ -34,13 +31,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if there are already entries for this date
-    const existingEntries = await prisma.drinkEntry.findMany({
-      where: {
-        userId: session.user.id,
-        date: targetDate,
-      },
-    });
+    const dateStr = targetDate.toISOString().split("T")[0];
+    const db = getDB();
+
+    const { results: existingEntries } = await db
+      .prepare(
+        "SELECT * FROM drink_entries WHERE user_id = ? AND date = ?",
+      )
+      .bind(session.user.id, dateStr)
+      .all<DBDrinkEntry>();
 
     const totalCount = existingEntries.reduce(
       (sum, entry) => sum + entry.count,
@@ -54,16 +53,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create a zero entry to mark the day as tracked
-    const entry = await prisma.drinkEntry.create({
-      data: {
-        userId: session.user.id,
-        count: 0,
-        date: targetDate,
-      },
-    });
+    const id = crypto.randomUUID();
+    await db
+      .prepare(
+        "INSERT INTO drink_entries (id, user_id, count, date) VALUES (?, ?, ?, ?)",
+      )
+      .bind(id, session.user.id, 0, dateStr)
+      .run();
 
-    return NextResponse.json({ success: true, entry });
+    return NextResponse.json({
+      success: true,
+      entry: { id, userId: session.user.id, count: 0, date: dateStr },
+    });
   } catch (error) {
     console.error("Error confirming zero:", error);
     return NextResponse.json(
